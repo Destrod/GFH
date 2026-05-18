@@ -6,8 +6,11 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 public class GfhApplication {
 
-	public static void main(String[] args) {
-		SpringApplication.run(GfhApplication.class, args);
-	}
-
+    public static void main(String[] args) {
+        SpringApplication.run(GfhApplication.class, args);
+    }
 }
+
+
+
+
