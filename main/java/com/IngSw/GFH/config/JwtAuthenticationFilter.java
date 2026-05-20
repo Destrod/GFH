@@ -16,7 +16,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * Filtro que intercepta cada petición HTTP para validar el token JWT.
+ * Filtro JWT — intercepta cada petición y valida el token Bearer.
  */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
@@ -38,29 +38,52 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String authHeader = request.getHeader("Authorization");
 
+        // Si no hay header o no empieza con "Bearer ", continuar sin autenticar
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            System.out.println("[JWT] Header Authorization ausente o sin prefijo Bearer");
             filterChain.doFilter(request, response);
             return;
         }
 
-        final String jwt = authHeader.substring(7);
+        // Extraer el token quitando "Bearer " (7 caracteres)
+        final String jwt = authHeader.substring(7).trim();
+
+        if (jwt.isEmpty()) {
+            System.out.println("[JWT] Token vacío después de Bearer");
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         try {
             final String nombreUsuario = jwtUtil.extraerNombreUsuario(jwt);
+            System.out.println("[JWT] Usuario extraído del token: " + nombreUsuario);
 
-            if (nombreUsuario != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+            if (nombreUsuario != null
+                    && SecurityContextHolder.getContext().getAuthentication() == null) {
+
                 UserDetails userDetails = userDetailsService.loadUserByUsername(nombreUsuario);
 
                 if (jwtUtil.esTokenValido(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
-                                    userDetails, null, userDetails.getAuthorities());
-                    authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                                    userDetails,
+                                    null,
+                                    userDetails.getAuthorities()
+                            );
+                    authToken.setDetails(
+                            new WebAuthenticationDetailsSource().buildDetails(request));
                     SecurityContextHolder.getContext().setAuthentication(authToken);
+                    System.out.println("[JWT] Autenticación establecida para: " + nombreUsuario
+                            + " | Roles: " + userDetails.getAuthorities());
+                } else {
+                    System.out.println("[JWT] Token inválido o expirado para: " + nombreUsuario);
                 }
             }
+
         } catch (Exception e) {
-            // Token inválido — se continúa sin autenticar
+            // Imprime el error real en consola para diagnóstico
+            System.out.println("[JWT] Error al procesar el token: " + e.getClass().getSimpleName()
+                    + " — " + e.getMessage());
         }
 
         filterChain.doFilter(request, response);

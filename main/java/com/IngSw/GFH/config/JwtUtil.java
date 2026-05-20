@@ -11,6 +11,10 @@ import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
 
+/**
+ * Utilidad para generar y validar tokens JWT.
+ * Usa jjwt 0.12.x.
+ */
 @Component
 public class JwtUtil {
 
@@ -20,25 +24,27 @@ public class JwtUtil {
     @Value("${app.jwt.expiration-ms}")
     private long expirationMs;
 
-    // ── Clave de firma ───────────────────────────────────────
-
     private SecretKey getSigningKey() {
+        // La clave DEBE estar en Base64 válido en application.properties
         byte[] keyBytes = Decoders.BASE64.decode(secretKey);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 
-    // ── Generar token ────────────────────────────────────────
-
     public String generarToken(UserDetails userDetails) {
-        return Jwts.builder()
+        Date ahora     = new Date();
+        Date expiracion = new Date(ahora.getTime() + expirationMs);
+
+        String token = Jwts.builder()
                 .subject(userDetails.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .issuedAt(ahora)
+                .expiration(expiracion)
                 .signWith(getSigningKey())
                 .compact();
-    }
 
-    // ── Extraer claims ───────────────────────────────────────
+        System.out.println("[JWT] Token generado para: " + userDetails.getUsername()
+                + " | Expira: " + expiracion);
+        return token;
+    }
 
     private Claims extraerClaims(String token) {
         return Jwts.parser()
@@ -52,12 +58,13 @@ public class JwtUtil {
         return extraerClaims(token).getSubject();
     }
 
-    // ── Validar token ────────────────────────────────────────
-
     public boolean esTokenValido(String token, UserDetails userDetails) {
         final String nombreUsuario = extraerNombreUsuario(token);
-        return nombreUsuario.equals(userDetails.getUsername())
+        boolean valido = nombreUsuario.equals(userDetails.getUsername())
                 && !estaExpirado(token);
+        System.out.println("[JWT] Validando token — Usuario: " + nombreUsuario
+                + " | Válido: " + valido);
+        return valido;
     }
 
     private boolean estaExpirado(String token) {
