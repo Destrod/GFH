@@ -9,9 +9,11 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
+import java.util.Optional;
+
 /**
- * Inicializador de datos: crea un administrador por defecto y mesas
- * si la base de datos está vacía al arrancar la aplicación.
+ * Inicializador de datos: crea o reinicia el administrador por defecto
+ * y crea las mesas si no existen.
  */
 @Component
 public class DataInitializer implements CommandLineRunner {
@@ -30,12 +32,19 @@ public class DataInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        crearAdminPorDefecto();
+        sincronizarAdmin();
         crearMesasPorDefecto();
     }
 
-    private void crearAdminPorDefecto() {
-        if (!empleadoRepository.existsByNombreUsuario("admin")) {
+    /**
+     * Crea el admin si no existe, o resetea su contraseña si ya existe.
+     * Garantiza que siempre se pueda hacer login con admin / admin123.
+     */
+    private void sincronizarAdmin() {
+        Optional<Empleado> existente = empleadoRepository.findByNombreUsuario("admin");
+
+        if (!existente.isPresent()) {
+            // Crear admin por primera vez
             Empleado admin = new Empleado(
                     "Administrador",
                     "Principal",
@@ -44,7 +53,16 @@ public class DataInitializer implements CommandLineRunner {
                     passwordEncoder.encode("admin123")
             );
             empleadoRepository.save(admin);
-            System.out.println(">>> Admin por defecto creado: usuario=admin | contraseña=admin123");
+            System.out.println(">>> Admin creado: usuario=admin | contrasena=admin123");
+
+        } else {
+            // Admin ya existe — resetear contraseña para garantizar acceso
+            Empleado admin = existente.get();
+            admin.setContrasena(passwordEncoder.encode("admin123"));
+            admin.setActivo(true);
+            admin.setRol(Rol.ADMINISTRADOR);
+            empleadoRepository.save(admin);
+            System.out.println(">>> Admin sincronizado: usuario=admin | contrasena=admin123");
         }
     }
 
