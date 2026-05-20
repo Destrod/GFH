@@ -2,19 +2,15 @@ package com.IngSw.GFH.config;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
-import io.jsonwebtoken.security.Keys;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
-/**
- * Utilidad para generar y validar tokens JWT.
- * Usa jjwt 0.12.x.
- */
 @Component
 public class JwtUtil {
 
@@ -25,13 +21,18 @@ public class JwtUtil {
     private long expirationMs;
 
     private SecretKey getSigningKey() {
-        // La clave DEBE estar en Base64 válido en application.properties
-        byte[] keyBytes = Decoders.BASE64.decode(secretKey);
-        return Keys.hmacShaKeyFor(keyBytes);
+        byte[] keyBytes = secretKey.getBytes(StandardCharsets.UTF_8);
+        // HMAC-SHA256 requiere mínimo 32 bytes — rellenar si es más corta
+        if (keyBytes.length < 32) {
+            byte[] padded = new byte[32];
+            System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);
+            keyBytes = padded;
+        }
+        return new SecretKeySpec(keyBytes, "HmacSHA256");
     }
 
     public String generarToken(UserDetails userDetails) {
-        Date ahora     = new Date();
+        Date ahora      = new Date();
         Date expiracion = new Date(ahora.getTime() + expirationMs);
 
         String token = Jwts.builder()
@@ -62,7 +63,7 @@ public class JwtUtil {
         final String nombreUsuario = extraerNombreUsuario(token);
         boolean valido = nombreUsuario.equals(userDetails.getUsername())
                 && !estaExpirado(token);
-        System.out.println("[JWT] Validando token — Usuario: " + nombreUsuario
+        System.out.println("[JWT] Validando — Usuario: " + nombreUsuario
                 + " | Válido: " + valido);
         return valido;
     }
