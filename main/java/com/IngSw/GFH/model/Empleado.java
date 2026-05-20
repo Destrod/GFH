@@ -9,13 +9,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
-/**
- * Entidad que representa un empleado del restaurante.
- * CU-03 / CU-09: Campos requeridos para el registro de un empleado.
- *
- * NOTA: Las validaciones (@NotBlank, @NotNull) se aplican en los DTOs
- * (EmpleadoRequest, LoginRequest) y no en la entidad JPA directamente.
- */
 @Entity
 @Table(name = "empleados")
 public class Empleado {

@@ -10,10 +10,6 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 
-/**
- * Entidad que representa una mesa del restaurante.
- * CU-10 / CU-13: Una mesa puede estar asignada o disponible.
- */
 @Entity
 @Table(name = "mesas")
 public class Mesa {

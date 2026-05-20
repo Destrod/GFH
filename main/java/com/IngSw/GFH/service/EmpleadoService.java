@@ -1,13 +1,11 @@
 package com.IngSw.GFH.service;
 
-
 import com.IngSw.GFH.dto.EmpleadoRequest;
 import com.IngSw.GFH.dto.EmpleadoResponse;
 import com.IngSw.GFH.exception.RecursoNoEncontradoException;
 import com.IngSw.GFH.exception.UsuarioDuplicadoException;
 import com.IngSw.GFH.model.Empleado;
 import com.IngSw.GFH.repository.EmpleadoRepository;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -19,17 +17,13 @@ import java.util.Optional;
 public class EmpleadoService {
 
     private final EmpleadoRepository empleadoRepository;
-    private final PasswordEncoder passwordEncoder;
 
-    public EmpleadoService(EmpleadoRepository empleadoRepository,
-                           PasswordEncoder passwordEncoder) {
+    public EmpleadoService(EmpleadoRepository empleadoRepository) {
         this.empleadoRepository = empleadoRepository;
-        this.passwordEncoder = passwordEncoder;
     }
 
     @Transactional
     public EmpleadoResponse registrarEmpleado(EmpleadoRequest request) {
-        // CU-09: Flujo alternativo — nombre de usuario ya existe
         if (empleadoRepository.existsByNombreUsuario(request.getNombreUsuario())) {
             throw new UsuarioDuplicadoException(
                     "El nombre de usuario '" + request.getNombreUsuario() + "' ya se encuentra registrado");
@@ -40,24 +34,20 @@ public class EmpleadoService {
                 request.getApellido(),
                 request.getNombreUsuario(),
                 request.getRol(),
-                passwordEncoder.encode(request.getContrasena())
+                request.getContrasena()   // texto plano — sin encode
         );
 
-        Empleado guardado = empleadoRepository.save(empleado);
-        return EmpleadoResponse.desde(guardado);
+        return EmpleadoResponse.desde(empleadoRepository.save(empleado));
     }
 
     public List<EmpleadoResponse> consultarEmpleados() {
         List<Empleado> empleados = empleadoRepository.findByActivoTrue();
-
-        // CU-11: Flujo alternativo — no existen empleados registrados
         if (empleados.size() == 0) {
             throw new RecursoNoEncontradoException("No hay empleados disponibles para consultar");
         }
-
         List<EmpleadoResponse> resultado = new ArrayList<EmpleadoResponse>();
-        for (Empleado empleado : empleados) {
-            resultado.add(EmpleadoResponse.desde(empleado));
+        for (Empleado e : empleados) {
+            resultado.add(EmpleadoResponse.desde(e));
         }
         return resultado;
     }
@@ -76,9 +66,7 @@ public class EmpleadoService {
         if (!opcional.isPresent()) {
             throw new RecursoNoEncontradoException("Empleado con ID " + id + " no encontrado");
         }
-
         Empleado empleado = opcional.get();
-        // Baja lógica para preservar integridad referencial
         empleado.setActivo(false);
         empleadoRepository.save(empleado);
     }
