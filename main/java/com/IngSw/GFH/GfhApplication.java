@@ -10,7 +10,3 @@ public class GfhApplication {
         SpringApplication.run(GfhApplication.class, args);
     }
 }
-
-
-
-
